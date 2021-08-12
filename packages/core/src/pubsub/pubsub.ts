@@ -6,6 +6,7 @@ import { IncomingChannel, filterExternal, IPFSPubsubMessage } from './incoming-c
 import { DiagnosticsLogger, ServiceLogger } from '@ceramicnetwork/common'
 import { TextDecoder } from 'util'
 import uint8ArrayToString from 'uint8arrays/to-string'
+import { ObservableNext } from './observable-next'
 
 const textDecoder = new TextDecoder('utf-8')
 
@@ -46,7 +47,7 @@ function ipfsToPubsub(
 /**
  * Receive and publish messages to IPFS pubsub.
  */
-export class Pubsub extends Observable<PubsubMessage> {
+export class Pubsub extends Observable<PubsubMessage> implements ObservableNext<PubsubMessage> {
   private readonly peerId$: Observable<string>
 
   constructor(
