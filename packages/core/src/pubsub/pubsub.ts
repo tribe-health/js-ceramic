@@ -75,6 +75,7 @@ export class Pubsub extends Observable<PubsubMessage> {
    * Feel free to disregard it though.
    */
   next(message: PubsubMessage): Subscription {
+    console.log('pubsub.next', message)
     return this.peerId$
       .pipe(
         mergeMap(async (peerId) => {

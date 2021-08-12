@@ -15,6 +15,7 @@ import { Pubsub } from './pubsub/pubsub'
 import { Subscription } from 'rxjs'
 import { MessageBus } from './pubsub/message-bus'
 import { LRUMap } from 'lru_map'
+import { KeepAlive } from './pubsub/keep-alive';
 
 const IPFS_GET_RETRIES = 3
 const IPFS_GET_TIMEOUT = 30000 // 30 seconds per retry, 3 retries = 90 seconds total timeout
@@ -30,6 +31,8 @@ function messageTypeToString(type: MsgType): string {
       return 'Query'
     case MsgType.RESPONSE:
       return 'Response'
+    case MsgType.KEEPALIVE:
+      return 'KeepAlive'
     default:
       throw new UnreachableCaseError(type, `Unsupported message type`)
   }
@@ -51,7 +54,7 @@ export class Dispatcher {
     private readonly _pubsubLogger: ServiceLogger
   ) {
     const pubsub = new Pubsub(_ipfs, topic, IPFS_RESUBSCRIBE_INTERVAL_DELAY, _pubsubLogger, _logger)
-    this.messageBus = new MessageBus(pubsub)
+    this.messageBus = new MessageBus(new KeepAlive(pubsub, 3000, 5000))
     this.messageBus.subscribe(this.handleMessage.bind(this))
     this.dagNodeCache  = new LRUMap<string, any>(IPFS_CACHE_SIZE)
   }
@@ -205,6 +208,8 @@ export class Dispatcher {
         case MsgType.RESPONSE:
           await this._handleResponseMessage(message)
           break
+        case MsgType.KEEPALIVE:
+          return
         default:
           throw new UnreachableCaseError(message, `Unsupported message type`)
       }
