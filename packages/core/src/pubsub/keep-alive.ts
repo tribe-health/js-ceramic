@@ -1,14 +1,9 @@
-import { SubscriptionLike, Observable, Subscription, interval } from 'rxjs'
+import { Observable, Subscription, interval } from 'rxjs'
 import { MsgType, PubsubMessage } from './pubsub-message'
 import { ObservableNext } from './observable-next'
 
-export class KeepAlive
-  extends Observable<PubsubMessage>
-  implements SubscriptionLike, ObservableNext<PubsubMessage>
-{
-  private subscription: Subscription | undefined = undefined
+export class KeepAlive extends Observable<PubsubMessage> implements ObservableNext<PubsubMessage> {
   private lastSent: number = Date.now()
-  private keepalive: Subscription
 
   /**
    * @param pubsub
@@ -22,31 +17,18 @@ export class KeepAlive
   ) {
     super((subscriber) => {
       console.log('keep-alive.subscribed', new Date())
-      this.subscription = pubsub.subscribe(subscriber)
-    })
-    this.keepalive = interval(period).subscribe(() => {
-      const now = Date.now()
-      if (now - this.lastSent >= this.window) {
-        this.next({ typ: MsgType.KEEPALIVE, ts: now })
+      pubsub.subscribe(subscriber)
+      const keepalive = interval(period).subscribe(() => {
+        const now = Date.now()
+        if (now - this.lastSent >= this.window) {
+          this.next({ typ: MsgType.KEEPALIVE, ts: now })
+        }
+      })
+      return () => {
+        console.log('keep-alive.unsubscribe')
+        keepalive.unsubscribe()
       }
     })
-  }
-
-  get closed(): boolean {
-    let result = false
-    if (this.subscription) {
-      result = this.subscription.closed
-    } else {
-      result = false
-    }
-    console.log(`keep-alive.closed`, new Date(), result)
-    return result
-  }
-
-  unsubscribe(): void {
-    console.log('keep-alive.unsubscribe', new Date(), Boolean(this.subscription))
-    this.keepalive.unsubscribe()
-    this.subscription?.unsubscribe()
   }
 
   next(m: PubsubMessage): Subscription {
